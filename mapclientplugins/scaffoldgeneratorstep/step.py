@@ -3,7 +3,10 @@
 MAP Client Plugin Step
 """
 import json
+import os
 
+from cmlibs.zinc.context import Context
+from scaffoldmaker import scaffolds
 from mapclient.mountpoints.workflowstep import WorkflowStepMountPoint
 from mapclientplugins.scaffoldgeneratorstep.configuredialog import ConfigureDialog
 
@@ -20,15 +23,21 @@ class scaffoldgeneratorStep(WorkflowStepMountPoint):
         self._category = 'General'
         # Add any other initialisation code here:
         # Ports:
+        self.addPort([('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'),
+                      ('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses-list-of',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location')
+                      ])
         self.addPort(('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'))
-        self.addPort(('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
+                      'http://physiomeproject.org/workflow/1.0/rdf-schema#provides-list-of',
                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'))
         # Port data:
         self._portData0 = None  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
         self._portData1 = None  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
+        self._context = Context("scaffoldGenerator")
+        self._region = self._context.getDefaultRegion()
         # Config:
         self._config = {
             'identifier': '',
@@ -41,6 +50,20 @@ class scaffoldgeneratorStep(WorkflowStepMountPoint):
         may be connected up to a button in a widget for example.
         """
         # Put your execute step code here before calling the '_doneExecution' method.
+        self._portData1 = []
+
+        for file in self._portData0:
+            with open(file) as f:
+                c = json.load(f)
+
+            if "scaffold_settings" in c and "scaffoldPackage" in c["scaffold_settings"]:
+                sm = scaffolds.Scaffolds_decodeJSON(c["scaffold_settings"]["scaffoldPackage"])
+                sm.generate(self._region)
+
+                filename = os.path.splitext(file)[0] + '.exf'
+                self._region.writeFile(filename)
+                self._portData1.append(filename)
+
         self._doneExecution()
 
     def setPortData(self, index, dataIn):
@@ -52,6 +75,8 @@ class scaffoldgeneratorStep(WorkflowStepMountPoint):
         :param index: Index of the port to return.
         :param dataIn: The data to set for the port at the given index.
         """
+        if not isinstance(dataIn, list):
+            dataIn = [dataIn]
         self._portData0 = dataIn  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
 
     def getPortData(self, index):
