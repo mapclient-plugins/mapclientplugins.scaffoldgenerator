@@ -5,6 +5,7 @@ MAP Client Plugin Step
 import json
 import os
 
+from cmlibs.utils.zinc.general import ChangeManager
 from cmlibs.zinc.context import Context
 from scaffoldmaker import scaffolds
 from mapclient.mountpoints.workflowstep import WorkflowStepMountPoint
@@ -52,17 +53,20 @@ class scaffoldgeneratorStep(WorkflowStepMountPoint):
         # Put your execute step code here before calling the '_doneExecution' method.
         self._portData1 = []
 
-        for file in self._portData0:
-            with open(file) as f:
-                c = json.load(f)
+        with ChangeManager(self._region):
+            for file in self._portData0:
+                with open(file) as f:
+                    c = json.load(f)
 
-            if "scaffold_settings" in c and "scaffoldPackage" in c["scaffold_settings"]:
-                sm = scaffolds.Scaffolds_decodeJSON(c["scaffold_settings"]["scaffoldPackage"])
-                sm.generate(self._region)
+                if "scaffold_settings" in c and "scaffoldPackage" in c["scaffold_settings"]:
+                    sm = scaffolds.Scaffolds_decodeJSON(c["scaffold_settings"]["scaffoldPackage"])
+                    region = self._region.createRegion()
+                    sm.generate(region)
 
-                filename = os.path.splitext(file)[0] + '.exf'
-                self._region.writeFile(filename)
-                self._portData1.append(filename)
+                    filename = os.path.splitext(file)[0] + '.exf'
+                    region.writeFile(filename)
+                    self._portData1.append(filename)
+                    del region
 
         self._doneExecution()
 
