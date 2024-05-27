@@ -12,14 +12,14 @@ from mapclient.mountpoints.workflowstep import WorkflowStepMountPoint
 from mapclientplugins.scaffoldgeneratorstep.configuredialog import ConfigureDialog
 
 
-class scaffoldgeneratorStep(WorkflowStepMountPoint):
+class ScaffoldGeneratorStep(WorkflowStepMountPoint):
     """
     Skeleton step which is intended to be a helpful starting point
     for new steps.
     """
 
     def __init__(self, location):
-        super(scaffoldgeneratorStep, self).__init__('scaffold generator', location)
+        super(ScaffoldGeneratorStep, self).__init__('Scaffold Generator', location)
         self._configured = False  # A step cannot be executed until it has been configured.
         self._category = 'General'
         # Add any other initialisation code here:
@@ -55,8 +55,11 @@ class scaffoldgeneratorStep(WorkflowStepMountPoint):
 
         with ChangeManager(self._region):
             for file in self._portData0:
-                with open(file) as f:
-                    c = json.load(f)
+                try:
+                    with open(file) as f:
+                        c = json.load(f)
+                except json.decoder.JSONDecodeError:
+                    continue
 
                 if "scaffold_settings" in c and "scaffoldPackage" in c["scaffold_settings"]:
                     sm = scaffolds.Scaffolds_decodeJSON(c["scaffold_settings"]["scaffoldPackage"])
